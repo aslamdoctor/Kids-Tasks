@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Calendar,
   CheckCircle2,
@@ -70,35 +70,72 @@ const endDate = new Date("2025-05-31");
 
 function App() {
   const [selectedDate, setSelectedDate] = useState(startDate);
-  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>(() => {
-    const saved = localStorage.getItem("completedTasks");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
+  const completedTasksRef = useRef(completedTasks);
+
   const [selectedChild, setSelectedChild] = useState<"aaliya" | "haidar">(
     "aaliya"
   );
 
   useEffect(() => {
-    localStorage.setItem("completedTasks", JSON.stringify(completedTasks));
-  }, [completedTasks]);
+    // get completed tasks from rest endpoint.
+    const fetchCompletedTasks = async () => {
+      const response = await fetch(
+        "https://aslamdoctor.com/wp-json/custom/v1/get_task"
+      );
+      const data = await response.json();
+      setCompletedTasks(data.data);
+    };
+    fetchCompletedTasks();
+  }, []);
+
+  const submitCompletedTasks = async () => {
+    const response = await fetch(
+      "https://aslamdoctor.com/wp-json/custom/v1/store_task",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          task_data: completedTasksRef.current,
+        }),
+      }
+    );
+    const data = await response.json();
+    console.log("Data submitted successfully:", data);
+  };
 
   const toggleTask = (taskId: number) => {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    const existingTask = completedTasks.find(
-      (t) =>
-        t.taskId === taskId &&
-        t.date === dateStr &&
-        t.childName === selectedChild
-    );
 
-    if (existingTask) {
-      setCompletedTasks(completedTasks.filter((t) => t !== existingTask));
-    } else {
-      setCompletedTasks([
-        ...completedTasks,
-        { taskId, date: dateStr, childName: selectedChild },
-      ]);
-    }
+    setCompletedTasks((prevTasks) => {
+      const existingTask = prevTasks.find(
+        (t) =>
+          t.taskId === taskId &&
+          t.date === dateStr &&
+          t.childName === selectedChild
+      );
+
+      let updatedTasks;
+
+      if (existingTask) {
+        updatedTasks = prevTasks.filter((t) => t !== existingTask);
+      } else {
+        updatedTasks = [
+          ...prevTasks,
+          { taskId, date: dateStr, childName: selectedChild },
+        ];
+      }
+
+      // Update ref manually here (if still using it)
+      completedTasksRef.current = updatedTasks;
+
+      // Submit within this function so it gets the updated list
+      submitCompletedTasks();
+
+      return updatedTasks;
+    });
   };
 
   const isTaskCompleted = (taskId: number) => {
@@ -175,63 +212,68 @@ function App() {
           </div>
 
           <div className="space-y-4">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className="bg-white border border-gray-200 rounded-xl p-6 hover:border-purple-200 transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <button
-                    onClick={() => toggleTask(task.id)}
-                    className={`mt-1 transition-all ${
-                      isTaskCompleted(task.id)
-                        ? "text-green-500"
-                        : "text-gray-300 hover:text-gray-400"
-                    }`}
-                  >
-                    <CheckCircle2 className="w-6 h-6" />
-                  </button>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                      {task.title}
-                    </h3>
-                    {task.examples && (
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-600 mb-1">Examples:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {task.examples.map((example, i) => (
-                            <span
-                              key={i}
-                              className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
-                            >
-                              {example}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {task.specificTasks &&
-                      task.specificTasks[selectedChild] && (
+            {tasks.length > 0 &&
+              tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-white border border-gray-200 rounded-xl p-6 hover:border-purple-200 transition-all"
+                >
+                  <div className="flex items-start gap-4">
+                    <button
+                      onClick={() => toggleTask(task.id)}
+                      className={`mt-1 transition-all ${
+                        isTaskCompleted(task.id)
+                          ? "text-green-500"
+                          : "text-gray-300 hover:text-gray-400"
+                      }`}
+                    >
+                      <CheckCircle2 className="w-6 h-6" />
+                    </button>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                        {task.title}
+                      </h3>
+                      {task.examples && (
                         <div className="mt-2">
-                          <p className="text-sm text-gray-600 mb-1">Options:</p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            Examples:
+                          </p>
                           <div className="flex flex-wrap gap-2">
-                            {task.specificTasks[selectedChild].map(
-                              (specificTask, i) => (
-                                <span
-                                  key={i}
-                                  className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
-                                >
-                                  {specificTask}
-                                </span>
-                              )
-                            )}
+                            {task.examples.map((example, i) => (
+                              <span
+                                key={i}
+                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                              >
+                                {example}
+                              </span>
+                            ))}
                           </div>
                         </div>
                       )}
+                      {task.specificTasks &&
+                        task.specificTasks[selectedChild] && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600 mb-1">
+                              Options:
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {task.specificTasks[selectedChild].map(
+                                (specificTask, i) => (
+                                  <span
+                                    key={i}
+                                    className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                                  >
+                                    {specificTask}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
 
