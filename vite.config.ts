@@ -7,5 +7,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["lucide-react"],
   },
-  base: "/Kids-Tasks",
+  base: "/kids-tasks",
 });
