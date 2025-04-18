@@ -77,7 +77,10 @@ function App() {
     "aaliya"
   );
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
+    setLoading(true);
     // get completed tasks from rest endpoint.
     const fetchCompletedTasks = async () => {
       const response = await fetch(
@@ -85,6 +88,10 @@ function App() {
       );
       const data = await response.json();
       setCompletedTasks(data.data);
+      setLoading(false);
+
+      // change date to today
+      setSelectedDate(new Date());
     };
     fetchCompletedTasks();
   }, []);
@@ -211,70 +218,74 @@ function App() {
             </button>
           </div>
 
-          <div className="space-y-4">
-            {tasks.length > 0 &&
-              tasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="bg-white border border-gray-200 rounded-xl p-6 hover:border-purple-200 transition-all"
-                >
-                  <div className="flex items-start gap-4">
-                    <button
-                      onClick={() => toggleTask(task.id)}
-                      className={`mt-1 transition-all ${
-                        isTaskCompleted(task.id)
-                          ? "text-green-500"
-                          : "text-gray-300 hover:text-gray-400"
-                      }`}
-                    >
-                      <CheckCircle2 className="w-6 h-6" />
-                    </button>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                        {task.title}
-                      </h3>
-                      {task.examples && (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-600 mb-1">
-                            Examples:
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {task.examples.map((example, i) => (
-                              <span
-                                key={i}
-                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
-                              >
-                                {example}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {task.specificTasks &&
-                        task.specificTasks[selectedChild] && (
+          { ! loading ? (
+            <div className="space-y-4">
+              {tasks.length > 0 &&
+                tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="bg-white border border-gray-200 rounded-xl p-6 hover:border-purple-200 transition-all"
+                  >
+                    <div className="flex items-start gap-4">
+                      <button
+                        onClick={() => toggleTask(task.id)}
+                        className={`mt-1 transition-all ${
+                          isTaskCompleted(task.id)
+                            ? "text-green-500"
+                            : "text-gray-300 hover:text-gray-400"
+                        }`}
+                      >
+                        <CheckCircle2 className="w-6 h-6" />
+                      </button>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                          {task.title}
+                        </h3>
+                        {task.examples && (
                           <div className="mt-2">
                             <p className="text-sm text-gray-600 mb-1">
-                              Options:
+                              Examples:
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {task.specificTasks[selectedChild].map(
-                                (specificTask, i) => (
-                                  <span
-                                    key={i}
-                                    className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
-                                  >
-                                    {specificTask}
-                                  </span>
-                                )
-                              )}
+                              {task.examples.map((example, i) => (
+                                <span
+                                  key={i}
+                                  className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                                >
+                                  {example}
+                                </span>
+                              ))}
                             </div>
                           </div>
                         )}
+                        {task.specificTasks &&
+                          task.specificTasks[selectedChild] && (
+                            <div className="mt-2">
+                              <p className="text-sm text-gray-600 mb-1">
+                                Options:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {task.specificTasks[selectedChild].map(
+                                  (specificTask, i) => (
+                                    <span
+                                      key={i}
+                                      className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                                    >
+                                      {specificTask}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-          </div>
+                ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-600">Loading...</div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
